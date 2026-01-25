@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block title %}Your films · Orion{% endblock %}
+
+{% block content %}
+<section class="section">
+    <div class="section-header">
+        <div>
+            <h1 class="section-title">Your film list</h1>
+            <p class="section-subtitle">
+                This is your personal ranking list. For now, films are ordered
+                by when you added them — we’ll add smart ranking next.
+            </p>
+        </div>
+        <a href="{% url 'add_film' %}" class="btn btn-primary">Add a film</a>
+    </div>
+
+    {% if user_films %}
+        <div class="list-card">
+            <ul class="film-list">
+                {% for uf in user_films %}
+                    <li class="film-list-item">
+                        <span class="film-rank">#{{ uf.position }}</span>
+                        <div class="film-main">
+                            <div class="film-title-row">
+                                <span class="film-title">
+                                    {{ uf.film.title }}
+                                </span>
+                                {% if uf.film.year %}
+                                    <span class="film-year">
+                                        {{ uf.film.year }}
+                                    </span>
+                                {% endif %}
+                            </div>
+                            {% if uf.watched_at %}
+                                <div class="film-meta">
+                                    Watched {{ uf.watched_at }}
+                                </div>
+                            {% else %}
+                                <div class="film-meta film-meta-muted">
+                                    Date watched not set
+                                </div>
+                            {% endif %}
+                        </div>
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
+    {% else %}
+        <div class="empty-state">
+            <h2>No films yet.</h2>
+            <p>
+                When you add movies you’ve watched, they’ll appear here.
+                Later we’ll turn this into a ranked list with automatic scores.
+            </p>
+            <a href="{% url 'add_film' %}" class="btn btn-primary">
+                Add your first film
+            </a>
+        </div>
+    {% endif %}
+</section>
+{% endblock %}

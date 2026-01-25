@@ -438,3 +438,112 @@ a {
     font-size: 0.8rem;
     color: var(--muted);
 }
+
+/* SECTION / LIST LAYOUTS */
+
+.section {
+    padding-top: 2.5rem;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.section-title {
+    margin: 0;
+    font-size: 1.4rem;
+}
+
+.section-subtitle {
+    margin: 0.25rem 0 0;
+    font-size: 0.85rem;
+    color: var(--muted);
+}
+
+.list-card {
+    background: rgba(15, 15, 21, 0.96);
+    border-radius: 1.2rem;
+    border: 1px solid var(--border);
+    padding: 0.75rem 0.75rem 0.4rem;
+    box-shadow: 0 24px 48px rgba(0, 0, 0, 0.85);
+}
+
+.film-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.film-list-item {
+    display: flex;
+    gap: 0.9rem;
+    align-items: flex-start;
+    padding: 0.6rem 0.5rem;
+    border-bottom: 1px solid rgba(39, 39, 51, 0.8);
+}
+
+.film-list-item:last-child {
+    border-bottom: none;
+}
+
+.film-rank {
+    width: 2.4rem;
+    font-size: 0.8rem;
+    text-align: right;
+    color: var(--muted);
+}
+
+.film-main {
+    flex: 1;
+}
+
+.film-title-row {
+    display: flex;
+    gap: 0.4rem;
+    align-items: baseline;
+}
+
+.film-title {
+    font-size: 0.95rem;
+}
+
+.film-year {
+    font-size: 0.8rem;
+    color: var(--muted);
+}
+
+.film-meta {
+    margin-top: 0.15rem;
+    font-size: 0.78rem;
+    color: var(--muted);
+}
+
+.film-meta-muted {
+    opacity: 0.7;
+}
+
+.empty-state {
+    margin-top: 2rem;
+    text-align: center;
+}
+
+.empty-state h2 {
+    margin-bottom: 0.4rem;
+}
+
+.empty-state p {
+    margin-top: 0;
+    margin-bottom: 1rem;
+    font-size: 0.9rem;
+    color: var(--muted);
+}
+
+.nav-user-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}

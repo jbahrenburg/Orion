@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block title %}Add a film · Orion{% endblock %}
+
+{% block content %}
+<section class="auth-layout">
+    <div class="auth-card">
+        <h1 class="auth-title">Add a film</h1>
+        <p class="auth-subtitle">
+            Add a movie you’ve watched to your personal list. We’ll handle
+            the ranking step in the next iteration.
+        </p>
+
+        <form method="post" novalidate>
+            {% csrf_token %}
+            {% for field in form %}
+                <div class="form-field">
+                    <label class="form-label" for="{{ field.id_for_label }}">
+                        {{ field.label }}
+                    </label>
+                    {{ field }}
+                    {% if field.help_text %}
+                        <p class="form-hint">{{ field.help_text|safe }}</p>
+                    {% endif %}
+                    {% for error in field.errors %}
+                        <p class="field-error">{{ error }}</p>
+                    {% endfor %}
+                </div>
+            {% endfor %}
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary btn-full">
+                    Save film
+                </button>
+            </div>
+        </form>
+    </div>
+</section>
+{% endblock %}

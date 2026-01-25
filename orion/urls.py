@@ -26,4 +26,7 @@ urlpatterns = [
     path("signup/", core_views.signup, name="account_signup"),
     path("login/", core_views.login_view, name="account_login"),
     path("logout/", core_views.logout_view, name="account_logout"),
+
+    path("films/", core_views.film_list, name="film_list"),
+    path("films/add/", core_views.add_film, name="add_film"),
 ]

@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block title %}Rank film · Orion{% endblock %}
+
+{% block content %}
+<section class="section">
+    <h1 class="section-title">
+        Help us rank {{ user_film.film.title }}
+    </h1>
+
+    <p class="section-subtitle">
+        {% if user_film.film.year %}
+            {{ user_film.film.year }}
+        {% endif %}
+    </p>
+
+    <div style="margin-top: 1.5rem;">
+        <a href="{% url 'film_list' %}" class="btn btn-outline">
+            Back to your list
+        </a>
+    </div>
+</section>
+{% endblock %}

@@ -2,7 +2,7 @@ from django.shortcuts import render
 from django.contrib import messages
 from django.contrib.auth import login as auth_login, logout as auth_logout
 from django.contrib.auth.decorators import login_required
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 
 from .forms import SignUpForm, LoginForm, AddFilmForm
 from .models import UserFilm
@@ -63,12 +63,24 @@ def add_film(request):
         form = AddFilmForm(request.user, request.POST)
         if form.is_valid():
             user_film = form.save()
+            user_film_count = UserFilm.objects.filter(user = request.user).count()
             messages.success(
                 request,
                 f"Added '{user_film.film}' to your list."
             )
-            return redirect("film_list")
+            if user_film_count == 1:
+                return redirect("film_list")
+            else:
+                return redirect("rank_film", user_film_id=user_film.id)
     else:
         form = AddFilmForm(request.user)
 
     return render(request, "core/add_film.html", {"form": form})
+
+@login_required
+def rank_film(request, user_film_id):
+    user_film = get_object_or_404(
+        UserFilm,
+        id=user_film_id,
+        user=request.user)
+    return render(request, "core/rank_film.html", {"user_film": user_film})

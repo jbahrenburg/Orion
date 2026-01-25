@@ -29,4 +29,5 @@ urlpatterns = [
 
     path("films/", core_views.film_list, name="film_list"),
     path("films/add/", core_views.add_film, name="add_film"),
+    path("films/rank/<int:user_film_id>", core_views.rank_film, name="rank_film"),
 ]

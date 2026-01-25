@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block title %}Sign up · Orion{% endblock %}
+
+{% block content %}
+<section class="auth-layout">
+    <div class="auth-card">
+        <h1 class="auth-title">Create your account</h1>
+        <p class="auth-subtitle">
+            Start logging the films you watch and keep your reviews in one place.
+        </p>
+
+        {% if form.non_field_errors %}
+            <div class="form-errors">
+                {% for error in form.non_field_errors %}
+                    <p>{{ error }}</p>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <form method="post" novalidate>
+            {% csrf_token %}
+            {% for field in form %}
+                <div class="form-field">
+                    <label class="form-label" for="{{ field.id_for_label }}">
+                        {{ field.label }}
+                    </label>
+                    {{ field }}
+                    {% if field.help_text %}
+                        <p class="form-hint">{{ field.help_text|safe }}</p>
+                    {% endif %}
+                    {% for error in field.errors %}
+                        <p class="field-error">{{ error }}</p>
+                    {% endfor %}
+                </div>
+            {% endfor %}
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary btn-full">
+                    Create account
+                </button>
+            </div>
+        </form>
+
+        <p class="auth-switch">
+            Already have an account?
+            <a href="{% url 'account_login' %}">Sign in</a>
+        </p>
+    </div>
+</section>
+{% endblock %}

@@ -16,9 +16,14 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
-from core.views import landing_page
+
+from core import views as core_views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path("", landing_page, name="landing")
+    path("", core_views.landing_page, name="landing"),
+
+    path("signup/", core_views.signup, name="account_signup"),
+    path("login/", core_views.login_view, name="account_login"),
+    path("logout/", core_views.logout_view, name="account_logout"),
 ]

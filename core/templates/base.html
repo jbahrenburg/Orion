@@ -1,0 +1,44 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}Orion · Film Journal{% endblock %}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="{% static 'core/styles.css' %}">
+</head>
+<body>
+<div class="page">
+    <!-- NAVBAR -->
+    <header class="nav">
+        <div class="nav-left">
+            <div class="logo-orb"></div>
+            <div class="brand">
+                <div class="brand-title">ORION</div>
+                <div class="brand-subtitle">Film log · In development</div>
+            </div>
+        </div>
+        <div class="nav-actions">
+            {% if request.user.is_authenticated %}
+                <span class="nav-user">
+                    {{ request.user.username }}
+                </span>
+                <a href="{% url 'account_logout' %}" class="btn btn-outline">Sign out</a>
+            {% else %}
+                <a href="{% url 'account_login' %}" class="nav-link">Log in</a>
+                <a href="{% url 'account_signup' %}" class="btn btn-primary">Sign up</a>
+            {% endif %}
+        </div>
+    </header>
+
+    <main class="main">
+        {% block content %}{% endblock %}
+    </main>
+</div>
+
+<footer class="footer">
+    <span>© {{ year|default:"2026" }} Orion · Personal film journal</span>
+    <span>Built with Django · Codename, for now.</span>
+</footer>
+</body>
+</html>

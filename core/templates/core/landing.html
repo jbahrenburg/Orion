@@ -1,0 +1,105 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Orion</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="{% static 'core/styles.css' %}">
+</head>
+<body>
+<div class="page">
+    <!-- NAVBAR -->
+    <header class="nav">
+        <div class="nav-left">
+            <div class="logo-orb"></div>
+            <div class="brand">
+                <div class="brand-title">ORION</div>
+                <div class="brand-subtitle">Django App · Codename</div>
+            </div>
+        </div>
+        <div class="nav-actions">
+            <a href="/login/" class="nav-link">Log in</a>
+            <a href="/signup/" class="btn btn-primary">Sign up</a>
+        </div>
+    </header>
+
+    <!-- MAIN -->
+    <main class="main">
+        <section class="hero">
+            <div>
+                <div class="eyebrow">
+                    <span class="eyebrow-dot"></span>
+                    A personal film journal
+                </div>
+                <h1 class="hero-title">
+                    Track what you’ve watched.<br>
+                    Remember what <span class="accent">moved you</span>.
+                </h1>
+                <p class="hero-text">
+                    Rate films, write thoughtful reviews, and build a personal archive of
+                    everything you’ve seen — from blockbuster releases to quiet favorites
+                    you’ll never stop thinking about.
+                </p>
+
+                <div class="hero-actions">
+                    <a href="/signup/" class="btn btn-primary">Start your film log</a>
+                    <a href="/login/" class="btn btn-outline">Sign in</a>
+                </div>
+
+                <p class="hero-note">
+                    No functionality wired up yet — just clean UI and routes ready for your auth flow.
+                </p>
+            </div>
+
+            <aside class="hero-card">
+                <div class="hero-card-header">
+                    <span class="pill">Project status</span>
+                    <div style="display:flex;align-items:center;gap:0.35rem;">
+                        <span class="status-dot"></span>
+                        <span style="font-size:0.78rem;color:var(--muted);">
+                            Dev server running
+                        </span>
+                    </div>
+                </div>
+
+                <div class="hero-metric-row">
+                    <div class="hero-metric">
+                        <span class="hero-metric-label">Environment</span>
+                        <span class="hero-metric-value">Local · Debug</span>
+                    </div>
+                    <div class="hero-metric">
+                        <span class="hero-metric-label">Framework</span>
+                        <span class="hero-metric-value">Django</span>
+                    </div>
+                    <div class="hero-metric">
+                        <span class="hero-metric-label">Next step</span>
+                        <span class="hero-metric-value">Auth &amp; models</span>
+                    </div>
+                </div>
+
+                <div class="hero-panel">
+                    <div>
+                        <strong style="font-size:0.8rem;color:var(--text);">
+                            You’re on the landing page.
+                        </strong>
+                        <div style="margin-top:0.25rem;">
+                            Wire these buttons to your authentication views once they’re ready.
+                        </div>
+                    </div>
+                    <div class="hero-pill-row">
+                        <span class="tag">/signup/</span>
+                        <span class="tag">/login/</span>
+                    </div>
+                </div>
+            </aside>
+        </section>
+    </main>
+</div>
+
+<footer class="footer">
+    <span>© {{ year|default:"2026" }} Orion · Codename only</span>
+    <span>Built with Django · Designed to be replaced when your real brand is ready.</span>
+</footer>
+</body>
+</html>

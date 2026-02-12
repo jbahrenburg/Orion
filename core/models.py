@@ -12,10 +12,8 @@ PREFERENCE_CHOICES = [
 class Film(models.Model):
     title = models.CharField(max_length=255)
     year = models.PositiveIntegerField(blank=True, null=True)
-
-    # optional fields for later expansion
-    # external_id = models.CharField(max_length=100, blank=True, null=True)  # e.g. TMDB/IMDB
-    # poster_url = models.URLField(blank=True, null=True)
+    tmdb_id = models.PositiveIntegerField(blank=True, null=True)
+    poster_path = models.CharField(max_length=255, blank=True, null=True)
 
     class Meta:
         ordering = ["title"]
@@ -33,6 +31,8 @@ class UserFilm(models.Model):
     """
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     film = models.ForeignKey(Film, on_delete=models.CASCADE)
+    tmdb_id = models.PositiveIntegerField(blank=True, null=True)
+    poster_path = models.CharField(max_length=255, blank=True, null=True)
     position = models.PositiveIntegerField(default=0)  # will use this for ranking later
     watched_at = models.DateField(blank=True, null=True)
     preference = models.CharField(

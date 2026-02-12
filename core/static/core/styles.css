@@ -634,3 +634,25 @@ a {
 .comparison-title {
     pointer-events: none;
 }
+
+.tmdb-results {
+  margin-top: 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  overflow: hidden;
+  background: rgba(15, 15, 21, 0.96);
+}
+
+.tmdb-result {
+  width: 100%;
+  text-align: left;
+  padding: 0.6rem 0.75rem;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.tmdb-result:hover {
+  background: rgba(229, 9, 20, 0.08);
+}

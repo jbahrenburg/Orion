@@ -4,9 +4,14 @@ from django.contrib.auth import login as auth_login, logout as auth_logout
 from django.contrib.auth.decorators import login_required
 from django.db import transaction, models
 from django.shortcuts import render, redirect, get_object_or_404
+from django.http import JsonResponse, HttpResponseBadRequest
+from django.urls import reverse
+from django.db.models import Max
+
 
 from .forms import SignUpForm, LoginForm, AddFilmForm
-from .models import UserFilm
+from .models import UserFilm, Film
+from .services.tmdb import search_movies, get_director
 
 # Create your views here.
 def landing_page(request):
@@ -113,7 +118,7 @@ def rank_film(request, user_film_id):
                     )
                     user_film.position = new_pos
                     user_film.save()
-        return redirect(film_list)
+        return redirect("film_list")
 
     return render(request,
                   "core/rank_film.html",
@@ -121,3 +126,81 @@ def rank_film(request, user_film_id):
                    "comparison":    comparison,
                    },
                 )
+
+@login_required
+def tmdb_search(request):
+    q = request.GET.get("q", "").strip()
+    year_str = request.GET.get("year", "").strip()
+
+    year = None
+    if year_str.isdigit():
+        year = int(year_str)
+
+    results = search_movies(q, year=year)
+    return JsonResponse({"results": results})
+
+@login_required
+def film_search(request):
+    q = request.GET.get("q", "").strip()
+
+    results = search_movies(q) if q else []
+
+    user_films = (
+        UserFilm.objects
+        .filter(user=request.user, film__tmdb_id__isnull=False)
+        .select_related("film")
+    )
+    owned_by_tmdb = {uf.film.tmdb_id: uf for uf in user_films}
+
+    for r in results:
+        uf = owned_by_tmdb.get(r["tmdb_id"])
+        r["owned"] = bool(uf)
+        r["preference"] = uf.preference if uf else None
+        r["director"] = get_director(r["tmdb_id"])
+
+    return render(request, "core/film_search.html", {
+        "q": q,
+        "results": results,
+    })
+
+@login_required
+def add_tmdb_film(request, tmdb_id: int):
+    if request.method != "POST":
+        return HttpResponseBadRequest("POST required")
+
+    title = (request.POST.get("title") or "").strip()
+    year_str = (request.POST.get("year") or "").strip()
+    poster_path = (request.POST.get("poster_path") or "").strip() or None
+
+    year = int(year_str) if year_str.isdigit() else None
+    if not title:
+        return HttpResponseBadRequest("Missing title")
+
+    # 1) Create/get the Film (correct model)
+    film, _ = Film.objects.get_or_create(
+        tmdb_id=tmdb_id,
+        defaults={
+            "title": title,
+            "year": year,
+            "poster_path": poster_path,
+        }
+    )
+
+    # 2) Create/get UserFilm for THIS user (since rank_film expects user_film_id)
+    # Put it at end for now; rank_film will move it if needed
+    max_pos = (
+        UserFilm.objects
+        .filter(user=request.user)
+        .aggregate(Max("position"))
+        .get("position__max")
+    )
+    next_pos = (max_pos or 0) + 1
+
+    user_film, created = UserFilm.objects.get_or_create(
+        user=request.user,
+        film=film,
+        defaults={"position": next_pos},
+    )
+
+    # 3) Redirect using the correct keyword arg name
+    return redirect("rank_film", user_film_id=user_film.id)

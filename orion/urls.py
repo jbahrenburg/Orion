@@ -30,4 +30,7 @@ urlpatterns = [
     path("films/", core_views.film_list, name="film_list"),
     path("films/add/", core_views.add_film, name="add_film"),
     path("films/rank/<int:user_film_id>", core_views.rank_film, name="rank_film"),
+    path("api/tmdb/search/", core_views.tmdb_search, name="tmdb_search"),
+    path("films/search/", core_views.film_search, name="film_search"),
+    path("films/add/<int:tmdb_id>/", core_views.add_tmdb_film, name="add_tmdb_film"),
 ]

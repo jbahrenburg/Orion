@@ -31,6 +31,8 @@ class LoginForm(AuthenticationForm):
 class AddFilmForm(forms.Form):
     title = forms.CharField(max_length=255, label="Film title")
     year = forms.IntegerField(required=False, label="Year (optional)")
+    tmdb_id = forms.IntegerField(required=False, widget=forms.HiddenInput())
+    poster_path = forms.CharField(required=False, widget=forms.HiddenInput())
     watched_at = forms.DateField(
         required=False,
         label="Date watched (optional)",
@@ -59,7 +61,20 @@ class AddFilmForm(forms.Form):
         year = self.cleaned_data.get("year")
         watched_at = self.cleaned_data.get("watched_at")
 
-        film, _ = Film.objects.get_or_create(title=title, year=year)
+        tmdb_id = self.cleaned_data.get("tmdb_id")
+        poster_path = self.cleaned_data.get("poster_path")
+
+        if tmdb_id:
+            film, _ = Film.objects.get_or_create(
+                tmdb_id=tmdb_id,
+                defaults={
+                    "title": title,
+                    "year": year,
+                    "poster_path": poster_path,
+                },
+            )
+        else:
+            film, _ = Film.objects.get_or_create(title=title, year=year)
 
         # Determine the next position (append to end)
         last_entry = (

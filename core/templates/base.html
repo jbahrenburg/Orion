@@ -21,6 +21,7 @@
         <div class="nav-actions">
             {% if request.user.is_authenticated %}
                 <div class="nav-user-group">
+                    <a class="nav-link" href="{% url 'film_search' %}">Search</a>
                     <a href="{% url 'film_list' %}" class="nav-link nav-pill">
                         Your films
                     </a>

@@ -13,20 +13,44 @@
 
         <form method="post" novalidate>
             {% csrf_token %}
-            {% for field in form %}
+
+            {{ form.tmdb_id }}
+            {{ form.poster_path }}
+
+            <div class="form-field">
+                <label class="form-label" for="{{ form.title.id_for_label }}">
+                    {{ form.title.label }}
+                </label>
+                {{ form.title }}
+
+                <div id="tmdb-results" class="tmdb-results" style="display:none;"></div>
+
+                {% for error in form.title.errors %}
+                    <p class="field-error">{{ error }}</p>
+                {% endfor %}
+            </div>
+
+            <div class="form-field">
+                <label class="form-label" for="{{ form.year.id_for_label }}">
+                    {{ form.year.label }}
+                </label>
+                {{ form.year }}
+                {% for error in form.year.errors %}
+                    <p class="field-error">{{ error }}</p>
+                {% endfor %}
+            </div>
+
+            {% if form.watched_at %}
                 <div class="form-field">
-                    <label class="form-label" for="{{ field.id_for_label }}">
-                        {{ field.label }}
+                    <label class="form-label" for="{{ form.watched_at.id_for_label }}">
+                        {{ form.watched_at.label }}
                     </label>
-                    {{ field }}
-                    {% if field.help_text %}
-                        <p class="form-hint">{{ field.help_text|safe }}</p>
-                    {% endif %}
-                    {% for error in field.errors %}
+                    {{ form.watched_at }}
+                    {% for error in form.watched_at.errors %}
                         <p class="field-error">{{ error }}</p>
                     {% endfor %}
                 </div>
-            {% endfor %}
+            {% endif %}
 
             <div class="form-actions">
                 <button type="submit" class="btn btn-primary btn-full">
@@ -36,4 +60,83 @@
         </form>
     </div>
 </section>
+
+<script>
+  const titleInput = document.querySelector('input[name="title"]');
+  const yearInput = document.querySelector('input[name="year"]');
+  const tmdbIdInput = document.querySelector('input[name="tmdb_id"]');
+  const posterPathInput = document.querySelector('input[name="poster_path"]');
+  const resultsBox = document.getElementById('tmdb-results');
+
+  let debounceTimer = null;
+
+  function hideResults() {
+    resultsBox.style.display = "none";
+    resultsBox.innerHTML = "";
+  }
+
+  function renderResults(results) {
+    if (!results || results.length === 0) {
+      hideResults();
+      return;
+    }
+
+    resultsBox.innerHTML = results.map(movie => {
+      const label = `${movie.title}${movie.year ? " (" + movie.year + ")" : ""}`;
+      return `
+        <button type="button" class="tmdb-result"
+          data-id="${movie.tmdb_id}"
+          data-title="${movie.title.replace(/"/g, "&quot;")}"
+          data-year="${movie.year || ""}"
+          data-poster="${movie.poster_path || ""}">
+          ${label}
+        </button>
+      `;
+    }).join("");
+
+    resultsBox.style.display = "block";
+  }
+
+  async function searchTMDB() {
+    const q = titleInput.value.trim();
+    if (q.length < 2) {
+      hideResults();
+      return;
+    }
+
+    const url = `/api/tmdb/search/?q=${encodeURIComponent(q)}`;
+    const resp = await fetch(url);
+    const data = await resp.json();
+    renderResults(data.results);
+  }
+
+  titleInput.addEventListener("input", () => {
+    // user changed title manually → clear TMDB selection
+    if (tmdbIdInput) tmdbIdInput.value = "";
+    if (posterPathInput) posterPathInput.value = "";
+
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(searchTMDB, 250);
+  });
+
+  resultsBox.addEventListener("click", (e) => {
+    const btn = e.target.closest(".tmdb-result");
+    if (!btn) return;
+
+    titleInput.value = btn.dataset.title;
+    if (yearInput && btn.dataset.year) {
+      yearInput.value = btn.dataset.year;
+    }
+    if (tmdbIdInput) tmdbIdInput.value = btn.dataset.id;
+    if (posterPathInput) posterPathInput.value = btn.dataset.poster;
+
+    hideResults();
+  });
+
+  document.addEventListener("click", (e) => {
+    if (!resultsBox.contains(e.target) && e.target !== titleInput) {
+      hideResults();
+    }
+  });
+</script>
 {% endblock %}

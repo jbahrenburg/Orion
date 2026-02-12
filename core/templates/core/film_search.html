@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Search films · Orion{% endblock %}
+
+{% block content %}
+<section class="section section--wide">
+  <h1 class="section-title">Search films</h1>
+  <p class="section-subtitle">Search TMDB and add movies directly to your list.</p>
+
+  <form method="get" style="margin-top: 1rem;">
+    <div class="form-field">
+      <label class="form-label" for="q">Film name</label>
+      <input class="form-input" id="q" name="q" value="{{ q }}" placeholder="e.g., Alien" />
+    </div>
+
+    <button type="submit" class="btn btn-primary">Search</button>
+  </form>
+
+  {% if q and results %}
+    <div style="margin-top: 1.5rem;" class="list-card">
+      <ul class="film-list">
+        {% for r in results %}
+          <li class="film-list-item" style="align-items:center;">
+            <div class="film-main">
+              <div class="film-title-row">
+                <div class="film-title">{{ r.title }}</div>
+                {% if r.year %}
+                  <div class="film-year">{{ r.year }}</div>
+                {% endif %}
+              </div>
+              <div class="film-meta">
+                {% if r.director %}{{ r.director }}{% else %}Director unknown{% endif %}
+                {% if r.year %} • {{ r.year }}{% endif %}
+              </div>
+            </div>
+
+            {% if r.owned %}
+              <span class="pill">
+                {% if r.preference %}
+                  {{ r.preference|capfirst }}
+                {% else %}
+                  Added
+                {% endif %}
+              </span>
+            {% else %}
+              <form method="post" action="{% url 'add_tmdb_film' r.tmdb_id %}">
+                {% csrf_token %}
+                <input type="hidden" name="title" value="{{ r.title }}">
+                <input type="hidden" name="year" value="{{ r.year }}">
+                <input type="hidden" name="poster_path" value="{{ r.poster_path }}">
+                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                <button type="submit" class="btn btn-outline">+ Add</button>
+              </form>
+            {% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+    </div>
+  {% elif q %}
+    <p class="film-meta" style="margin-top: 1.25rem;">No results found.</p>
+  {% endif %}
+</section>
+{% endblock %}

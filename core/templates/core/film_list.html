@@ -31,13 +31,13 @@
                                     </span>
                                 {% endif %}
                             </div>
-                            {% if uf.watched_at %}
+                            {% if uf.film.director %}
                                 <div class="film-meta">
-                                    Watched {{ uf.watched_at }}
+                                    {{ uf.film.director }}
                                 </div>
                             {% else %}
                                 <div class="film-meta film-meta-muted">
-                                    Date watched not set
+                                    Director unknown
                                 </div>
                             {% endif %}
                         </div>

@@ -14,6 +14,7 @@ class Film(models.Model):
     year = models.PositiveIntegerField(blank=True, null=True)
     tmdb_id = models.PositiveIntegerField(blank=True, null=True)
     poster_path = models.CharField(max_length=255, blank=True, null=True)
+    director = models.CharField(max_length=255, blank=True, null=True)
 
     class Meta:
         ordering = ["title"]

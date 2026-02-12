@@ -175,16 +175,28 @@ def add_tmdb_film(request, tmdb_id: int):
     year = int(year_str) if year_str.isdigit() else None
     if not title:
         return HttpResponseBadRequest("Missing title")
+    
+    print(get_director(tmdb_id))
 
     # 1) Create/get the Film (correct model)
-    film, _ = Film.objects.get_or_create(
+    film, created = Film.objects.get_or_create(
         tmdb_id=tmdb_id,
         defaults={
             "title": title,
             "year": year,
             "poster_path": poster_path,
+            "director": get_director(tmdb_id),
         }
     )
+
+    if not created and not film.director:
+        film.director = get_director(tmdb_id)
+        # optional: also backfill year/poster if missing
+        if not film.year and year:
+            film.year = year
+        if not film.poster_path and poster_path:
+            film.poster_path = poster_path
+        film.save()
 
     # 2) Create/get UserFilm for THIS user (since rank_film expects user_film_id)
     # Put it at end for now; rank_film will move it if needed

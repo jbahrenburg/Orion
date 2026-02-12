@@ -34,7 +34,7 @@ a {
 }
 
 .page {
-    max-width: 960px;
+    max-width: 1200px;
     margin: 0 auto;
     padding: 1.75rem 1.25rem 3rem;
     flex: 1;
@@ -318,7 +318,7 @@ a {
 
 .footer {
     padding: 1.5rem 1.25rem 2rem;
-    max-width: 960px;
+    max-width: 1200px;
     margin: 0 auto;
     font-size: 0.75rem;
     color: var(--muted);
@@ -445,6 +445,10 @@ a {
     padding-top: 2.5rem;
 }
 
+.section--wide {
+    max-width: 1200px;
+}
+
 .section-header {
     display: flex;
     justify-content: space-between;
@@ -546,4 +550,87 @@ a {
     display: flex;
     align-items: center;
     gap: 0.5rem;
+}
+
+/* COMPARISON UI */
+
+.comparison-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+    margin-top: 1.5rem;
+}
+
+.comparison-grid-three {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+@media (max-width: 700px) {
+    .comparison-grid,
+    .comparison-grid-three {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+@media (max-width: 600px) {
+    .comparison-grid,
+    .comparison-grid-three {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+.comparison-card {
+    padding: 0.9rem 0.9rem 0.8rem;
+    border-radius: 0.9rem;
+    border: 1px solid var(--border);
+    background: rgba(15, 15, 21, 0.96);
+    box-shadow: 0 18px 32px rgba(0, 0, 0, 0.8);
+}
+
+.comparison-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--muted);
+    margin-bottom: 0.4rem;
+}
+
+.comparison-title {
+    font-size: 1rem;
+    color: var(--text);
+    font-weight: 500;
+}
+
+.comparison-year {
+    margin-top: 0.1rem;
+    font-size: 0.8rem;
+    color: var(--muted);
+}
+
+.comparison-choice {
+    cursor: pointer;
+    display: block;
+}
+
+/* keep the nice hover animation */
+.comparison-choice:hover,
+.comparison-choice:focus-visible {
+    transform: translateY(-2px);
+    border-color: rgba(229, 9, 20, 0.45);
+    box-shadow:
+        0 22px 40px rgba(0, 0, 0, 0.9),
+        0 0 0 1px rgba(229, 9, 20, 0.35);
+}
+
+.comparison-choice:hover,
+.comparison-choice:focus-visible {
+    transform: translateY(-2px);
+    border-color: rgba(229, 9, 20, 0.45);
+    box-shadow:
+        0 22px 40px rgba(0, 0, 0, 0.9),
+        0 0 0 1px rgba(229, 9, 20, 0.35);
+}
+
+.comparison-title {
+    pointer-events: none;
 }

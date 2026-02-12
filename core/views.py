@@ -2,6 +2,7 @@ from django.shortcuts import render
 from django.contrib import messages
 from django.contrib.auth import login as auth_login, logout as auth_logout
 from django.contrib.auth.decorators import login_required
+from django.db import transaction, models
 from django.shortcuts import render, redirect, get_object_or_404
 
 from .forms import SignUpForm, LoginForm, AddFilmForm
@@ -83,4 +84,40 @@ def rank_film(request, user_film_id):
         UserFilm,
         id=user_film_id,
         user=request.user)
-    return render(request, "core/rank_film.html", {"user_film": user_film})
+    comparison = (
+        UserFilm.objects
+        .filter(user=request.user)
+        .exclude(id=user_film.id)
+        .select_related("film")
+        .first()
+    )
+
+    if request.method == "POST":
+        pref_value = request.POST.get("preference")
+        if pref_value in ("liked", "ok", "disliked"):
+            user_film.preference = pref_value
+            user_film.save()
+            return redirect("rank_film", user_film_id=user_film.id)
+        choice = request.POST.get("choice")
+        if comparison and choice == "new":
+            with transaction.atomic():
+                old_pos = user_film.position
+                new_pos = comparison.position
+                if old_pos > new_pos:
+                    UserFilm.objects.filter(
+                        user = request.user,
+                        position__gte = new_pos,
+                        position__lt = old_pos,
+                    ).exclude(id=user_film.id).update(
+                        position = models.F("position")+1
+                    )
+                    user_film.position = new_pos
+                    user_film.save()
+        return redirect(film_list)
+
+    return render(request,
+                  "core/rank_film.html",
+                  {"user_film":     user_film,
+                   "comparison":    comparison,
+                   },
+                )

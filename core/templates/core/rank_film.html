@@ -3,7 +3,7 @@
 {% block title %}Rank film · Orion{% endblock %}
 
 {% block content %}
-<section class="section">
+<section class="section section--wide">
     <h1 class="section-title">
         Help us rank {{ user_film.film.title }}
     </h1>
@@ -13,6 +13,67 @@
             {{ user_film.film.year }}
         {% endif %}
     </p>
+
+    {% if not user_film.preference %}
+        <p class="section-subtitle" style="margin-top: 1.5rem;">
+            First, tell us how you felt about the movie
+        </p>
+        <form method="post" style="margin-top: 1rem;">
+            {% csrf_token %}
+            <div class="comparison-grid comparison-grid-three">
+                <button class="comparison-card comparison-choice" type="submit" name="preference" value="liked">
+                    <div class="comparison-title">I liked it</div>
+                </button>
+                <button class="comparison-card comparison-choice" type="submit" name="preference" value="ok">
+                    <div class="comparison-title">It was OK</div>
+                </button>
+                <button class="comparison-card comparison-choice" type="submit" name="preference" value="disliked">
+                    <div class="comparison-title">I didn't like it</div>
+                </button>
+            </div>
+        </form>
+    {% else %}
+        {% if comparison %}
+            <form method="post">
+                {% csrf_token %}
+                <div class="comparison-grid">
+                    <button class="comparison-card comparison-choice" type="submit" name="choice" value="new">
+                        <div class="comparison-label">New Film</div>
+                        <div class="comparison-title">
+                            {{ user_film.film.title }}
+                        </div>
+                        {% if user_film.film.year %}
+                            <div class="comparison-year">
+                                {{ user_film.film.year }}
+                            </div>
+                        {% endif %}
+                    </button>
+                    <button class="comparison-card comparison-choice" type="submit" name="choice" value="comparison">
+                        <div class="comparison-label">Compare With</div>
+                        <div class="comparison-title">
+                            {{ comparison.film.title }}
+                        </div>
+                        {% if comparison.film.year %}
+                            <div class="comparison-year">
+                                {{ comparison.film.year }}
+                            </div>
+                        {% endif %}
+                    </button>
+                </div>
+            </form>
+
+            <div style="margin-top: 1.75rem;">
+                <p class="section-subtitle">
+                    Select whichever movie you preferred.
+                </p>
+            </div>
+        {% else %}
+            <p class="film-meta" style="margin-top: 1rem;">
+                There are no other films to compare against.
+                This can happen if this is your first film.
+            </p>
+        {% endif %}
+    {% endif %}
 
     <div style="margin-top: 1.5rem;">
         <a href="{% url 'film_list' %}" class="btn btn-outline">

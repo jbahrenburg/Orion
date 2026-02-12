@@ -3,6 +3,12 @@ from django.db import models
 
 # Create your models here.
 
+PREFERENCE_CHOICES = [
+    ("liked", "I liked it"),
+    ("ok", "It was ok"),
+    ("disliked", "I didn't like it")
+]
+
 class Film(models.Model):
     title = models.CharField(max_length=255)
     year = models.PositiveIntegerField(blank=True, null=True)
@@ -29,6 +35,12 @@ class UserFilm(models.Model):
     film = models.ForeignKey(Film, on_delete=models.CASCADE)
     position = models.PositiveIntegerField(default=0)  # will use this for ranking later
     watched_at = models.DateField(blank=True, null=True)
+    preference = models.CharField(
+        max_length=10,
+        choices=PREFERENCE_CHOICES,
+        blank=True,
+        null=True
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

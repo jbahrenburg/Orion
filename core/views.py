@@ -28,12 +28,40 @@ def _tier_queryset(request, user_film, tier: str):
 
 
 def _tier_start(user, tier: str) -> int:
-    """How many films are in tiers above this tier."""
     idx = PREF_ORDER.index(tier)
     above = PREF_ORDER[:idx]
     if not above:
         return 0
-    return UserFilm.objects.filter(user=user, preference__in=above).count()
+
+    # the tier starts right after the last item in tiers above
+    last_pos = (
+        UserFilm.objects
+        .filter(user=user, preference__in=above)
+        .aggregate(Max("position"))
+        .get("position__max")
+    )
+    return (last_pos + 1) if last_pos is not None else 0
+
+def normalize_positions(user):
+    """
+    Make positions contiguous 0..n-1 and enforce tier order.
+    Rank is truth.
+    """
+    pref_rank = {"liked": 0, "ok": 1, "disliked": 2}
+
+    qs = list(
+        UserFilm.objects
+        .filter(user=user)
+        .select_related("film")
+    )
+
+    # enforce tier order, then preserve existing relative order within tier by position
+    qs.sort(key=lambda uf: (pref_rank.get(uf.preference, 1), uf.position))
+
+    with transaction.atomic():
+        for i, uf in enumerate(qs):
+            if uf.position != i:
+                UserFilm.objects.filter(pk=uf.pk).update(position=i)
 
 def clamp01(x: float) -> float:
     return max(0.0, min(1.0, x))
@@ -100,28 +128,33 @@ def logout_view(request):
 @login_required
 def film_list(request):
     user_films = list(
-        UserFilm.objects.filter(user=request.user).select_related("film")
+        UserFilm.objects
+        .filter(user=request.user)
+        .select_related("film")
+        .order_by("position")
     )
 
-    # group Elo by tier
-    tier_elos = defaultdict(list)
+    # Compute rank-based tier-banded scores (Beli-like)
+    tiers = {"liked": [], "ok": [], "disliked": []}
     for uf in user_films:
-        if uf.preference in ("liked", "ok", "disliked"):
-            tier_elos[uf.preference].append(uf.elo)
+        tier = uf.preference if uf.preference in tiers else "ok"
+        tiers[tier].append(uf)
 
-    tier_minmax = {}
-    for tier, elos in tier_elos.items():
-        tier_minmax[tier] = (min(elos), max(elos))
+    for tier, items in tiers.items():
+        band_lo, band_hi = BANDS[tier]
+        n = len(items)
 
-    # attach display score (tier-banded)
-    for uf in user_films:
-        tier = uf.preference if uf.preference in ("liked", "ok", "disliked") else "ok"
-        mn, mx = tier_minmax.get(tier, (uf.elo, uf.elo))
-        uf.display_score10 = round(tier_banded_score(uf.elo, tier, mn, mx), 2)
+        if n == 1:
+            items[0].display_score10 = round((band_lo + band_hi) / 2.0, 2)
+            continue
+        if n == 0:
+            continue
 
-    # IMPORTANT: ordering should also respect tier first
-    pref_rank = {"liked": 0, "ok": 1, "disliked": 2}
-    user_films.sort(key=lambda uf: (pref_rank.get(uf.preference, 1), -uf.elo))
+        # best in tier (earlier in list) gets band_hi, worst gets band_lo
+        for idx, uf in enumerate(items):
+            t = idx / (n - 1)  # 0 for best -> 1 for worst
+            score = band_hi - t * (band_hi - band_lo)
+            uf.display_score10 = round(score, 2)
 
     return render(request, "core/film_list.html", {"user_films": user_films})
 
@@ -157,7 +190,7 @@ def rank_film(request, user_film_id):
             user_film.preference = pref_value
             user_film.save(update_fields=["preference"])
 
-            # initialize ranking state (binary search within tier)
+            # initialize ranking state (binary search within tier by POSITION)
             tier_qs = _tier_queryset(request, user_film, user_film.preference)
             request.session["rank_state"] = {
                 "target_uf_id": user_film.id,
@@ -186,9 +219,11 @@ def rank_film(request, user_film_id):
 
         if request.method == "POST":
             choice = request.POST.get("choice")
+
+            # Only proceed if we have candidates and are mid-search
             if choice in ("new", "comparison") and n > 0 and lo < hi:
                 mid = (lo + hi) // 2
-                comp = tier_qs[mid]  # the one we compared against
+                comp = tier_qs[mid]
 
                 winner_uf = user_film if choice == "new" else comp
                 loser_uf  = comp if choice == "new" else user_film
@@ -196,10 +231,12 @@ def rank_film(request, user_film_id):
                 with transaction.atomic():
                     # record outcome
                     PairwiseComparison.objects.create(
-                        user=request.user, winner=winner_uf.film, loser=loser_uf.film
+                        user=request.user,
+                        winner=winner_uf.film,
+                        loser=loser_uf.film,
                     )
 
-                    # Elo update (lock both rows)
+                    # Elo update (optional for now, but keep it for later BT/Elo use)
                     locked = (
                         UserFilm.objects.select_for_update()
                         .filter(user=request.user, id__in=[winner_uf.id, loser_uf.id])
@@ -211,8 +248,7 @@ def rank_film(request, user_film_id):
                     w.save(update_fields=["elo"])
                     l.save(update_fields=["elo"])
 
-                # Update bounds for binary search
-                # If new film wins, it belongs ABOVE comp => search left half
+                # Update bounds for binary search (rank truth)
                 if choice == "new":
                     hi = mid
                 else:
@@ -225,20 +261,22 @@ def rank_film(request, user_film_id):
                 if lo >= hi:
                     insert_index_in_tier = lo  # 0..n
                     tier_start = _tier_start(request.user, tier)
-
-                    # Convert to global position
                     insert_pos = tier_start + insert_index_in_tier
 
                     with transaction.atomic():
+                        # Shift everything at/after insert_pos down by 1
                         UserFilm.objects.filter(
                             user=request.user,
                             position__gte=insert_pos
                         ).exclude(id=user_film.id).update(position=models.F("position") + 1)
 
+                        # Place new film
                         user_film.position = insert_pos
                         user_film.save(update_fields=["position"])
 
-                    # Clear state and return to list
+                        # Normalize to remove gaps and enforce tier ordering
+                        normalize_positions(request.user)
+
                     request.session.pop("rank_state", None)
                     return redirect("film_list")
 
@@ -249,7 +287,7 @@ def rank_film(request, user_film_id):
             mid = (lo + hi) // 2
             comparison = tier_qs[mid]
 
-        # If tier empty or bounds done, just insert at tier boundary
+        # If tier empty, insert at tier boundary immediately
         elif n == 0:
             tier_start = _tier_start(request.user, tier)
             insert_pos = tier_start
@@ -262,6 +300,8 @@ def rank_film(request, user_film_id):
 
                 user_film.position = insert_pos
                 user_film.save(update_fields=["position"])
+
+                normalize_positions(request.user)
 
             request.session.pop("rank_state", None)
             return redirect("film_list")

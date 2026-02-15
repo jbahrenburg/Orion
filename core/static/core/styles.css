@@ -501,8 +501,36 @@ a {
     color: var(--muted);
 }
 
+.film-user-rating{
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  flex: 0 0 auto;
+  white-space: nowrap;
+
+  min-width: 3.25rem;
+  padding: 0.35rem 0.7rem;
+
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+
+  color: #fff;
+  background: linear-gradient(135deg, var(--accent), #6366f1);
+
+  border-radius: 999px;
+
+  box-shadow:
+    0 10px 20px rgba(79, 70, 229, 0.30),
+    0 0 0 1px rgba(255, 255, 255, 0.08);
+
+  opacity: 0.95;
+}
+
 .film-main {
     flex: 1;
+    min-width: 0;
 }
 
 .film-title-row {

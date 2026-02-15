@@ -19,7 +19,7 @@
             <ul class="film-list">
                 {% for uf in user_films %}
                     <li class="film-list-item">
-                        <span class="film-rank">#{{ uf.position }}</span>
+                        <span class="film-rank">#{{ uf.position|add:1 }}</span>
                         <div class="film-main">
                             <div class="film-title-row">
                                 <span class="film-title">
@@ -41,6 +41,7 @@
                                 </div>
                             {% endif %}
                         </div>
+                        <span class="film-user-rating">{{ uf.display_score10|floatformat:2 }}</span>
                     </li>
                 {% endfor %}
             </ul>

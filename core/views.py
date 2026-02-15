@@ -7,11 +7,51 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse, HttpResponseBadRequest
 from django.urls import reverse
 from django.db.models import Max
+from collections import defaultdict
 
 
 from .forms import SignUpForm, LoginForm, AddFilmForm
-from .models import UserFilm, Film
+from .models import UserFilm, Film, PairwiseComparison
 from .services.tmdb import search_movies, get_director
+from .services.ratings import elo_update, elo_to_10
+
+PREF_ORDER = ("liked", "ok", "disliked")
+
+def _tier_queryset(request, user_film, tier: str):
+    return (
+        UserFilm.objects
+        .filter(user=request.user, preference=tier)
+        .exclude(id=user_film.id)
+        .order_by("position")
+        .select_related("film")
+    )
+
+
+def _tier_start(user, tier: str) -> int:
+    """How many films are in tiers above this tier."""
+    idx = PREF_ORDER.index(tier)
+    above = PREF_ORDER[:idx]
+    if not above:
+        return 0
+    return UserFilm.objects.filter(user=user, preference__in=above).count()
+
+def clamp01(x: float) -> float:
+    return max(0.0, min(1.0, x))
+
+BANDS = {
+    "liked":    (6.67, 10.00),
+    "ok":       (3.33, 6.67),
+    "disliked": (0.00, 3.33),
+}
+
+def tier_banded_score(elo: float, tier: str, min_elo: float, max_elo: float) -> float:
+    lo, hi = BANDS[tier]
+    if max_elo <= min_elo:
+        # if only 1 film in tier, put it in the middle of the band
+        return (lo + hi) / 2.0
+
+    t = clamp01((elo - min_elo) / (max_elo - min_elo))
+    return lo + t * (hi - lo)
 
 # Create your views here.
 def landing_page(request):
@@ -59,8 +99,31 @@ def logout_view(request):
 
 @login_required
 def film_list(request):
-    films = UserFilm.objects.filter(user=request.user).select_related("film")
-    return render(request, "core/film_list.html", {"user_films": films})
+    user_films = list(
+        UserFilm.objects.filter(user=request.user).select_related("film")
+    )
+
+    # group Elo by tier
+    tier_elos = defaultdict(list)
+    for uf in user_films:
+        if uf.preference in ("liked", "ok", "disliked"):
+            tier_elos[uf.preference].append(uf.elo)
+
+    tier_minmax = {}
+    for tier, elos in tier_elos.items():
+        tier_minmax[tier] = (min(elos), max(elos))
+
+    # attach display score (tier-banded)
+    for uf in user_films:
+        tier = uf.preference if uf.preference in ("liked", "ok", "disliked") else "ok"
+        mn, mx = tier_minmax.get(tier, (uf.elo, uf.elo))
+        uf.display_score10 = round(tier_banded_score(uf.elo, tier, mn, mx), 2)
+
+    # IMPORTANT: ordering should also respect tier first
+    pref_rank = {"liked": 0, "ok": 1, "disliked": 2}
+    user_films.sort(key=lambda uf: (pref_rank.get(uf.preference, 1), -uf.elo))
+
+    return render(request, "core/film_list.html", {"user_films": user_films})
 
 
 @login_required
@@ -85,47 +148,129 @@ def add_film(request):
 
 @login_required
 def rank_film(request, user_film_id):
-    user_film = get_object_or_404(
-        UserFilm,
-        id=user_film_id,
-        user=request.user)
-    comparison = (
-        UserFilm.objects
-        .filter(user=request.user)
-        .exclude(id=user_film.id)
-        .select_related("film")
-        .first()
-    )
+    user_film = get_object_or_404(UserFilm, id=user_film_id, user=request.user)
 
+    # ---- 1) Preference step (qualifier) ----
     if request.method == "POST":
         pref_value = request.POST.get("preference")
-        if pref_value in ("liked", "ok", "disliked"):
+        if pref_value in PREF_ORDER:
             user_film.preference = pref_value
-            user_film.save()
-            return redirect("rank_film", user_film_id=user_film.id)
-        choice = request.POST.get("choice")
-        if comparison and choice == "new":
-            with transaction.atomic():
-                old_pos = user_film.position
-                new_pos = comparison.position
-                if old_pos > new_pos:
-                    UserFilm.objects.filter(
-                        user = request.user,
-                        position__gte = new_pos,
-                        position__lt = old_pos,
-                    ).exclude(id=user_film.id).update(
-                        position = models.F("position")+1
-                    )
-                    user_film.position = new_pos
-                    user_film.save()
-        return redirect("film_list")
+            user_film.save(update_fields=["preference"])
 
-    return render(request,
-                  "core/rank_film.html",
-                  {"user_film":     user_film,
-                   "comparison":    comparison,
-                   },
-                )
+            # initialize ranking state (binary search within tier)
+            tier_qs = _tier_queryset(request, user_film, user_film.preference)
+            request.session["rank_state"] = {
+                "target_uf_id": user_film.id,
+                "tier": user_film.preference,
+                "lo": 0,
+                "hi": tier_qs.count(),  # number of candidates in the tier
+            }
+            return redirect("rank_film", user_film_id=user_film.id)
+
+    # ---- 2) Comparison step ----
+    state = request.session.get("rank_state")
+    comparison = None
+
+    # Only run placement if user has preference AND session is for this film
+    if user_film.preference and state and state.get("target_uf_id") == user_film.id:
+        tier = state["tier"]
+        lo = state["lo"]
+        hi = state["hi"]
+
+        tier_qs = _tier_queryset(request, user_film, tier)
+        n = tier_qs.count()
+
+        # Safety clamp in case list changed
+        lo = max(0, min(lo, n))
+        hi = max(0, min(hi, n))
+
+        if request.method == "POST":
+            choice = request.POST.get("choice")
+            if choice in ("new", "comparison") and n > 0 and lo < hi:
+                mid = (lo + hi) // 2
+                comp = tier_qs[mid]  # the one we compared against
+
+                winner_uf = user_film if choice == "new" else comp
+                loser_uf  = comp if choice == "new" else user_film
+
+                with transaction.atomic():
+                    # record outcome
+                    PairwiseComparison.objects.create(
+                        user=request.user, winner=winner_uf.film, loser=loser_uf.film
+                    )
+
+                    # Elo update (lock both rows)
+                    locked = (
+                        UserFilm.objects.select_for_update()
+                        .filter(user=request.user, id__in=[winner_uf.id, loser_uf.id])
+                    )
+                    locked_map = {uf.id: uf for uf in locked}
+                    w = locked_map[winner_uf.id]
+                    l = locked_map[loser_uf.id]
+                    w.elo, l.elo = elo_update(w.elo, l.elo, k=24.0)
+                    w.save(update_fields=["elo"])
+                    l.save(update_fields=["elo"])
+
+                # Update bounds for binary search
+                # If new film wins, it belongs ABOVE comp => search left half
+                if choice == "new":
+                    hi = mid
+                else:
+                    lo = mid + 1
+
+                state["lo"], state["hi"] = lo, hi
+                request.session["rank_state"] = state
+
+                # If finished, finalize insertion
+                if lo >= hi:
+                    insert_index_in_tier = lo  # 0..n
+                    tier_start = _tier_start(request.user, tier)
+
+                    # Convert to global position
+                    insert_pos = tier_start + insert_index_in_tier
+
+                    with transaction.atomic():
+                        UserFilm.objects.filter(
+                            user=request.user,
+                            position__gte=insert_pos
+                        ).exclude(id=user_film.id).update(position=models.F("position") + 1)
+
+                        user_film.position = insert_pos
+                        user_film.save(update_fields=["position"])
+
+                    # Clear state and return to list
+                    request.session.pop("rank_state", None)
+                    return redirect("film_list")
+
+                return redirect("rank_film", user_film_id=user_film.id)
+
+        # If not posting a choice, render the current comparison
+        if n > 0 and lo < hi:
+            mid = (lo + hi) // 2
+            comparison = tier_qs[mid]
+
+        # If tier empty or bounds done, just insert at tier boundary
+        elif n == 0:
+            tier_start = _tier_start(request.user, tier)
+            insert_pos = tier_start
+
+            with transaction.atomic():
+                UserFilm.objects.filter(
+                    user=request.user,
+                    position__gte=insert_pos
+                ).exclude(id=user_film.id).update(position=models.F("position") + 1)
+
+                user_film.position = insert_pos
+                user_film.save(update_fields=["position"])
+
+            request.session.pop("rank_state", None)
+            return redirect("film_list")
+
+    return render(
+        request,
+        "core/rank_film.html",
+        {"user_film": user_film, "comparison": comparison},
+    )
 
 @login_required
 def tmdb_search(request):

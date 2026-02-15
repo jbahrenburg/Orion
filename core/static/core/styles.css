@@ -684,3 +684,88 @@ a {
 .tmdb-result:hover {
   background: rgba(229, 9, 20, 0.08);
 }
+
+.delete-form {
+  display: inline;
+}
+
+.delete-btn {
+  background: none;
+  border: none;
+  padding: 0.35rem;
+  margin-left: 0.5rem;
+  color: var(--muted);
+  cursor: pointer;
+  border-radius: 6px;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.delete-btn:hover {
+  background: rgba(239, 68, 68, 0.12); /* subtle red tint */
+  color: #ef4444;
+}
+
+.delete-btn:active {
+  transform: scale(0.95);
+}
+
+.film-list-item {
+  position: relative;
+}
+
+.delete-btn {
+  opacity: 0;
+}
+
+.film-list-item:hover .delete-btn {
+  opacity: 1;
+}
+
+/* Align rating + icon neatly */
+.film-actions{
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+/* Icon-only button (overrides any generic button styling) */
+.icon-btn{
+  appearance: none;
+  -webkit-appearance: none;
+
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+
+  padding: 0 !important;
+  margin: 0 !important;
+
+  line-height: 0;
+  color: var(--muted);
+  cursor: pointer;
+
+  opacity: 0;
+  transition: opacity 0.15s ease, color 0.15s ease, transform 0.1s ease;
+}
+
+/* Show the icon only on row hover (very discrete) */
+.film-list-item:hover .icon-btn{
+  opacity: 0.55;
+}
+
+.film-list-item:hover .icon-btn:hover{
+  opacity: 1;
+  color: #ef4444;
+  transform: scale(1.06);
+}
+
+/* Remove the default focus ring box (replace with subtle glow if you want) */
+.icon-btn:focus,
+.icon-btn:focus-visible{
+  outline: none;
+}
+
+/* Optional: accessible focus styling without a box */
+.icon-btn:focus-visible{
+  color: #ef4444;
+}

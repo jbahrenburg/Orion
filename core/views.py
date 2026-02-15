@@ -2,6 +2,7 @@ from django.shortcuts import render
 from django.contrib import messages
 from django.contrib.auth import login as auth_login, logout as auth_logout
 from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_POST
 from django.db import transaction, models
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse, HttpResponseBadRequest
@@ -401,3 +402,31 @@ def add_tmdb_film(request, tmdb_id: int):
 
     # 3) Redirect using the correct keyword arg name
     return redirect("rank_film", user_film_id=user_film.id)
+
+@require_POST
+@login_required
+def delete_user_film(request, user_film_id):
+    uf = get_object_or_404(UserFilm, id=user_film_id, user=request.user)
+
+    with transaction.atomic():
+        deleted_pos = uf.position
+        film = uf.film
+
+        # Delete comparisons for this user that involve this film
+        PairwiseComparison.objects.filter(
+            user=request.user
+        ).filter(
+            models.Q(winner=film) | models.Q(loser=film)
+        ).delete()
+
+        # Delete the UserFilm row
+        uf.delete()
+
+        # Close the gap in positions
+        UserFilm.objects.filter(
+            user=request.user,
+            position__gt=deleted_pos
+        ).update(position=models.F("position") - 1)
+
+    messages.success(request, f"Removed '{film.title}' from your list.")
+    return redirect("film_list")

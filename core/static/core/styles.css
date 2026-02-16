@@ -769,3 +769,121 @@ a {
 .icon-btn:focus-visible{
   color: #ef4444;
 }
+
+/* DIRECTOR LIST */
+
+.director-table{
+  width: 100%;
+}
+
+.director-header,
+.director-item{
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 84px 84px 84px 96px 120px;
+  gap: 1rem;
+  align-items: center;
+}
+
+.director-header{
+  position: sticky; /* feels like a real header row */
+  top: 72px;        /* adjust if your nav height differs */
+  z-index: 2;
+
+  padding: 0.75rem 0.75rem 0.65rem;
+  margin: 0 0 0.25rem;
+
+  background: rgba(15, 15, 21, 0.92);
+  border: 1px solid rgba(39, 39, 51, 0.8);
+  border-radius: 0.9rem;
+
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: rgba(245, 245, 247, 0.78);
+}
+
+.director-list .film-list-item{
+  padding: 0.75rem 0.5rem;
+}
+
+.director-name{
+  min-width: 0;
+}
+
+.director-link{
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.director-link:hover{
+  text-decoration: underline;
+}
+
+.director-col,
+.director-num{
+  text-align: center;
+}
+
+.director-col--name,
+.director-name{
+  text-align: left;
+}
+
+.director-col--avg{
+  text-align: right;
+}
+
+.director-avg{
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* Make the numeric columns feel like "data" not body text */
+.director-num{
+  font-variant-numeric: tabular-nums;
+  font-size: 0.86rem;
+  color: var(--muted);
+}
+
+/* Tighten the badge so it doesn’t look like it’s floating */
+.director-avg .film-user-rating{
+  min-width: 3.4rem;
+}
+
+/* Mobile: hide header and stack */
+@media (max-width: 800px){
+  .director-header{
+    position: static;
+    top: auto;
+  }
+
+  .director-item{
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      "name avg"
+      "stats stats";
+    row-gap: 0.4rem;
+  }
+
+  .director-name{ grid-area: name; }
+  .director-avg{ grid-area: avg; }
+
+  .director-item .director-num{
+    grid-area: stats;
+    display: inline-block;
+    text-align: left;
+    margin-right: 0.9rem;
+    font-size: 0.8rem;
+  }
+
+  .director-item .director-num:nth-child(2)::before{ content: "Films: "; }
+  .director-item .director-num:nth-child(3)::before{ content: "Liked: "; }
+  .director-item .director-num:nth-child(4)::before{ content: "OK: "; }
+  .director-item .director-num:nth-child(5)::before{ content: "Disliked: "; }
+
+  .director-item .director-num::before{
+    color: rgba(161, 161, 170, 0.85);
+  }
+}

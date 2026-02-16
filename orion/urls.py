@@ -34,4 +34,5 @@ urlpatterns = [
     path("films/search/", core_views.film_search, name="film_search"),
     path("films/add/<int:tmdb_id>/", core_views.add_tmdb_film, name="add_tmdb_film"),
     path("films/<int:user_film_id>/delete/", core_views.delete_user_film, name="delete_user_film"),
+    path("directors/", core_views.director_list, name="director_list"),
 ]

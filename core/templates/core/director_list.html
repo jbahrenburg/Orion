@@ -1,0 +1,63 @@
+{# core/templates/core/director_list.html #}
+{% extends "base.html" %}
+{% block title %}Your directors · Orion{% endblock %}
+
+{% block content %}
+<section class="section">
+  <div class="section-header">
+    <div>
+      <h1 class="section-title">Your directors</h1>
+      <p class="section-subtitle">
+        Director averages are derived from your liked / ok / disliked selections (for now).
+      </p>
+    </div>
+  </div>
+
+  {% if directors %}
+    <div class="list-card">
+        <div class="director-table">
+            <div class="director-header" role="row">
+            <div class="director-col director-col--name">Director</div>
+            <div class="director-col">Films</div>
+            <div class="director-col">Liked</div>
+            <div class="director-col">OK</div>
+            <div class="director-col">Disliked</div>
+            <div class="director-col director-col--avg">Avg</div>
+            </div>
+
+            <ul class="film-list director-list">
+            {% for d in directors %}
+                <li class="film-list-item director-item">
+                <div class="director-name">
+                    <a class="director-link"
+                    href="{% url 'film_list' %}?director={{ d.film__director|urlencode }}">
+                    {{ d.film__director }}
+                    </a>
+                </div>
+
+                <div class="director-num">{{ d.film_count }}</div>
+                <div class="director-num">{{ d.liked }}</div>
+                <div class="director-num">{{ d.ok }}</div>
+                <div class="director-num">{{ d.disliked }}</div>
+
+                <div class="director-avg">
+                    <span class="film-user-rating">
+                    {% if d.avg_score10 %}{{ d.avg_score10|floatformat:2 }}{% else %}--{% endif %}
+                    </span>
+                </div>
+                </li>
+            {% endfor %}
+            </ul>
+        </div>
+    </div>
+  {% else %}
+    <div class="empty-state">
+      <h2>No directors yet.</h2>
+      <p>Add some films and they’ll be grouped here automatically.</p>
+      <a href="{% url 'add_film' %}" class="btn btn-primary">
+        Add your first film
+      </a>
+    </div>
+  {% endif %}
+</section>
+{% endblock %}

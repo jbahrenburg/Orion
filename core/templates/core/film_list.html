@@ -11,6 +11,12 @@
                 This is your personal ranking list. For now, films are ordered
                 by when you added them — we’ll add smart ranking next.
             </p>
+            {% if active_director %}
+                <p>
+                    Filtering by director: <strong>{{ active_director }}</strong>
+                    — <a href="{% url 'film_list' %}">clear</a>
+                </p>
+            {% endif %}
         </div>
     </div>
 

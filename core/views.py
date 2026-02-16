@@ -9,6 +9,7 @@ from django.http import JsonResponse, HttpResponseBadRequest
 from django.urls import reverse
 from django.db.models import Max
 from collections import defaultdict
+import math
 
 
 from .forms import SignUpForm, LoginForm, AddFilmForm
@@ -73,6 +74,34 @@ BANDS = {
     "disliked": (0.00, 3.33),
 }
 
+def compute_display_scores(user_films):
+    """
+    Mutates each UserFilm in `user_films` by setting uf.display_score10
+    using the exact same tier-banded scoring logic as film_list().
+    """
+    tiers = {"liked": [], "ok": [], "disliked": []}
+
+    for uf in user_films:
+        tier = uf.preference if uf.preference in tiers else "ok"
+        tiers[tier].append(uf)
+
+    for tier, items in tiers.items():
+        band_lo, band_hi = BANDS[tier]
+        n = len(items)
+
+        if n == 0:
+            continue
+
+        if n == 1:
+            items[0].display_score10 = round((band_lo + band_hi) / 2.0, 2)
+            continue
+
+        # best in tier (earlier in list) gets band_hi, worst gets band_lo
+        for idx, uf in enumerate(items):
+            t = idx / (n - 1)  # 0 for best -> 1 for worst
+            score = band_hi - t * (band_hi - band_lo)
+            uf.display_score10 = round(score, 2)
+
 def tier_banded_score(elo: float, tier: str, min_elo: float, max_elo: float) -> float:
     lo, hi = BANDS[tier]
     if max_elo <= min_elo:
@@ -134,6 +163,14 @@ def film_list(request):
         .select_related("film")
         .order_by("position")
     )
+    director = (request.GET.get("director") or "").strip()
+    if director:
+        user_films = (
+            UserFilm.objects
+            .filter(user=request.user)
+            .select_related("film")
+        )
+        user_films = user_films.filter(film__director=director)
 
     # Compute rank-based tier-banded scores (Beli-like)
     tiers = {"liked": [], "ok": [], "disliked": []}
@@ -157,7 +194,61 @@ def film_list(request):
             score = band_hi - t * (band_hi - band_lo)
             uf.display_score10 = round(score, 2)
 
-    return render(request, "core/film_list.html", {"user_films": user_films})
+    return render(
+        request,
+        "core/film_list.html",
+        {"user_films": user_films, "active_director": director},
+    )
+
+@login_required
+def director_list(request):
+    # Pull all films in the same order your film list uses
+    user_films = list(
+        UserFilm.objects
+        .filter(user=request.user)
+        .select_related("film")
+        .order_by("position")
+    )
+
+    # Compute display_score10 for each film (same as film_list)
+    compute_display_scores(user_films)
+
+    # Aggregate by director in Python (because display_score10 isn't in DB)
+    director_map = {}
+
+    for uf in user_films:
+        director = (uf.film.director or "").strip()
+        if not director:
+            continue
+
+        d = director_map.setdefault(director, {
+            "film__director": director,
+            "film_count": 0,
+            "liked": 0,
+            "ok": 0,
+            "disliked": 0,
+            "scores": [],
+        })
+
+        d["film_count"] += 1
+        if uf.preference in ("liked", "ok", "disliked"):
+            d[uf.preference] += 1
+
+        # display_score10 should always exist after compute_display_scores
+        if hasattr(uf, "display_score10") and uf.display_score10 is not None:
+            d["scores"].append(float(uf.display_score10))
+
+    # Finalize average
+    directors = []
+    for director, d in director_map.items():
+        scores = d.pop("scores")
+        d["avg_score10"] = round(sum(scores) / len(scores), 2) if scores else None
+        directors.append(d)
+
+    # Sort like you expect: avg desc, then film_count desc, then name
+    directors.sort(key=lambda x: (x["avg_score10"] is None, -(x["avg_score10"] or 0), -x["film_count"], x["film__director"].lower()))
+
+    return render(request, "core/director_list.html", {"directors": directors})
 
 
 @login_required
